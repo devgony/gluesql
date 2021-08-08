@@ -17,35 +17,47 @@ impl Glue {
         Self { storage }
     }
 
-    pub fn plan(&self, sql: &str) -> Result<Statement> {
-        let parsed = parse(sql)?;
-        let statements = translate(&parsed)?;
+    pub fn plan(&self, sql: &str) -> Vec<Result<Statement>> {
+        let statements: Vec<Result<Statement>>;
+        let parsed = parse(sql).unwrap();
         let storage = self.storage.as_ref().unwrap();
-
-        block_on(plan(storage, statements))
+        parsed.iter().try_fold(storage, |storage, parsed| {
+            // let translated = translate(&parsed);
+            match translate(&parsed) {
+                Ok(statement) => {
+                    statements.push(block_on(plan(storage, statement)));
+                    return Ok(statement);
+                }
+                Err(e) => {
+                    return Err(e);
+                }
+            }
+        });
+        return statements;
     }
 
-    pub fn execute_stmt(&mut self, statement: Statement) -> Result<Payload> {
+    pub fn execute_stmt(&mut self, statements: Vec<Statement>) -> Result<Payload> {
         let storage = self.storage.take().unwrap();
-
-        match block_on(execute(storage, &statement)) {
-            Ok((storage, payload)) => {
-                self.storage = Some(storage);
-
-                Ok(payload)
+        let mut payload: Option<Payload> = None;
+        let result = statements.iter().try_fold(storage, |storage, statement| {
+            match block_on(execute(storage, &statement)) {
+                Ok((s, p)) => {
+                    payload = Some(p);
+                    return Ok(s);
+                }
+                Err((_s, e)) => {
+                    return Err(e);
+                }
             }
-            Err((storage, error)) => {
-                self.storage = Some(storage);
-
-                Err(error)
-            }
-        }
+        });
+        self.storage = Some(result?);
+        return Ok(payload.unwrap());
     }
 
     pub fn execute(&mut self, sql: &str) -> Result<Payload> {
-        let statement = self.plan(sql)?;
+        let statements = self.plan(sql)?;
 
-        self.execute_stmt(statement)
+        self.execute_stmt(statements)
     }
 }
 
