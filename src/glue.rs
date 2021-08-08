@@ -19,10 +19,10 @@ impl Glue {
 
     pub fn plan(&self, sql: &str) -> Result<Statement> {
         let parsed = parse(sql)?;
-        let statement = translate(&parsed[0])?;
+        let statements = translate(&parsed)?;
         let storage = self.storage.as_ref().unwrap();
 
-        block_on(plan(storage, statement))
+        block_on(plan(storage, statements))
     }
 
     pub fn execute_stmt(&mut self, statement: Statement) -> Result<Payload> {
