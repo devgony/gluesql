@@ -27,23 +27,21 @@ gluesql = "0.7"
 ### Usage
 
 ```rust
-use gluesql::{parse, Glue, SledStorage};
+use gluesql::{Glue, SledStorage};
 
 fn main() {
     let storage = SledStorage::new("data.db").unwrap();
     let mut glue = Glue::new(storage);
-
     let sqls = "
+        DROP TABLE IF EXISTS Glue;
         CREATE TABLE Glue (id INTEGER);
         INSERT INTO Glue VALUES (100);
         INSERT INTO Glue VALUES (200);
         SELECT * FROM Glue WHERE id > 100;
-        DROP TABLE Glue;
     ";
-
-    for query in parse(sqls).unwrap() {
-        glue.execute(&query).unwrap();
-    }
+    let result = glue.execute(&sqls);
+    println!("Result: {:?}", result);
+    // Result: Ok(Select { labels: ["id"], rows: [Row([I64(200)])] })
 }
 ```
 
