@@ -1,7 +1,6 @@
 use gluesql::{Glue, SledStorage};
 
 fn main() {
-    // let storage = SledStorage::new("data/doc-db").unwrap();
     let storage = SledStorage::new("data.db").unwrap();
     let mut glue = Glue::new(storage);
     let sqls = "
@@ -13,6 +12,5 @@ fn main() {
     ";
     let result = glue.execute(&sqls);
     println!("Result: {:?}", result);
-    // Results: [Ok(DropTable), Ok(Create), Ok(Insert(1)), Ok(Insert(1)), Ok(Select { labels: ["id"], rows: [Row([I64(200)])] })]
-    // Error: None
+    // Result: Ok(Select { labels: ["id"], rows: [Row([I64(200)])] })
 }

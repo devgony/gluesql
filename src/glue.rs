@@ -17,23 +17,15 @@ impl Glue {
         Self { storage }
     }
 
-    pub fn plan(&self, sql: &str) -> Vec<Result<Statement>> {
-        let statements: Vec<Result<Statement>>;
+    pub fn plan(&self, sql: &str) -> Vec<Statement> {
+        let mut statements: Vec<Statement> = Vec::new();
         let parsed = parse(sql).unwrap();
         let storage = self.storage.as_ref().unwrap();
-        parsed.iter().try_fold(storage, |storage, parsed| {
-            // let translated = translate(&parsed);
-            match translate(&parsed) {
-                Ok(statement) => {
-                    statements.push(block_on(plan(storage, statement)));
-                    return Ok(statement);
-                }
-                Err(e) => {
-                    return Err(e);
-                }
-            }
-        });
-        return statements;
+        for a_sql in parsed {
+            let statement = translate(&a_sql).unwrap();
+            statements.push(block_on(plan(storage, statement)).unwrap())
+        }
+        statements
     }
 
     pub fn execute_stmt(&mut self, statements: Vec<Statement>) -> Result<Payload> {
@@ -43,19 +35,17 @@ impl Glue {
             match block_on(execute(storage, &statement)) {
                 Ok((s, p)) => {
                     payload = Some(p);
-                    return Ok(s);
+                    Ok(s)
                 }
-                Err((_s, e)) => {
-                    return Err(e);
-                }
+                Err((_s, e)) => Err(e),
             }
         });
         self.storage = Some(result?);
-        return Ok(payload.unwrap());
+        Ok(payload.unwrap())
     }
 
     pub fn execute(&mut self, sql: &str) -> Result<Payload> {
-        let statements = self.plan(sql)?;
+        let statements = self.plan(sql);
 
         self.execute_stmt(statements)
     }
