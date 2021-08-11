@@ -281,5 +281,21 @@ async fn evaluate_function<'a, T: 'static + Debug>(
 
             Ok(Evaluated::from(Value::Str(converted)))
         }
+        Function::Ltrim { expr, chars } => {
+            let target = match eval_to_str("LTRIM", chars).await? {
+                Nullable::Value(v) => v.to_string(),
+                Nullable::Null => String::from(""),
+            };
+
+            let string = match eval_to_str("LTRIM", expr).await? {
+                Nullable::Value(v) => Ok(Value::Str(v.trim_start_matches(&target).to_string())),
+                Nullable::Null => Ok(Value::Null),
+                _ => Err::<_, Error>(
+                    EvaluateError::FunctionRequiresStringValue("LTRIM".to_owned()).into(),
+                ),
+            };
+            println!("{:?},{:?},{:?}", string, chars, target);
+            Ok(Evaluated::from(string?))
+        }
     }
 }

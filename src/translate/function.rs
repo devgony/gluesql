@@ -1,7 +1,7 @@
 use {
     super::{expr::translate_expr, translate_object_name, TranslateError},
     crate::{
-        ast::{Aggregate, Expr, Function, ObjectName},
+        ast::{Aggregate, AstLiteral, Expr, Function, ObjectName},
         result::Result,
     },
     sqlparser::ast::{Function as SqlFunction, FunctionArg as SqlFunctionArg},
@@ -80,6 +80,20 @@ pub fn translate_function(sql_function: &SqlFunction) -> Result<Expr> {
             let size = translate_expr(args[1])?;
 
             Ok(Expr::Function(Box::new(Function::Right { expr, size })))
+        }
+        "LTRIM" => {
+            let expr;
+            let chars;
+            if let Ok(()) = check_len(name.clone(), args.len(), 1) {
+                expr = translate_expr(args[0])?;
+                chars = Expr::Literal(AstLiteral::QuotedString(String::from(' ')));
+            } else if let Ok(()) = check_len(name, args.len(), 2) {
+                expr = translate_expr(args[0])?;
+                chars = translate_expr(args[1])?;
+            } else {
+                panic!()
+            }
+            Ok(Expr::Function(Box::new(Function::Ltrim { expr, chars })))
         }
         "COUNT" => aggr!(Aggregate::Count),
         "SUM" => aggr!(Aggregate::Sum),

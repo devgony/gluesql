@@ -9,8 +9,7 @@ pub enum Function {
     Upper(Expr),
     Left { expr: Expr, size: Expr },
     Right { expr: Expr, size: Expr },
-    Ltrim { expr: Expr, chars: &'a [char] },
-    Rtrim { expr: Expr, chars: &'b [char] },
+    Ltrim { expr: Expr, chars: Expr },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
