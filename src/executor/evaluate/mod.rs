@@ -404,6 +404,38 @@ async fn evaluate_function<'a, T: 'static + Debug>(
 
             Ok(Evaluated::from(Value::I64(lcm(left, right))))
         }
+        Function::Ltrim { expr, chars } | Function::Rtrim { expr, chars } => {
+            let name = if matches!(func, Function::Ltrim { .. }) {
+                "LTRIM"
+            } else {
+                "RTRIM"
+            };
+            // let pattern: Result<Vec<char>>;
+            // if let Some(var) = chars {
+            let pattern: Result<Vec<char>> = match chars {
+                Some(chars) => match eval_to_str(name, chars).await? {
+                    Nullable::Value(v) => Ok(v.chars().collect::<Vec<char>>()),
+                    Nullable::Null => Ok(" ".chars().collect::<Vec<char>>()),
+                },
+                None => Ok(" ".chars().collect::<Vec<char>>()),
+            };
+            // let pattern: Result<Vec<char>> = match eval_to_str(name, chars).await? {
+            //     Nullable::Value(v) => Ok(v.chars().collect::<Vec<char>>()),
+            //     Nullable::Null => Ok(" ".chars().collect::<Vec<char>>()),
+            // };
+            // }
+            match eval_to_str(name, expr).await? {
+                Nullable::Value(v) => {
+                    if name == "LTRIM" {
+                        Ok(Value::Str(v.trim_start_matches(&pattern?[..]).to_string()))
+                    } else {
+                        Ok(Value::Str(v.trim_end_matches(&pattern?[..]).to_string()))
+                    }
+                }
+                Nullable::Null => Ok(Value::Null),
+            }
+            .map(Evaluated::from)
+        }
     }
 }
 

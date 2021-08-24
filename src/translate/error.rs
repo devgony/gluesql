@@ -21,6 +21,14 @@ pub enum TranslateError {
         found: usize,
     },
 
+    #[error("function args.length range not matching: {name}, range: {min}-{max}, found: {found}")]
+    FunctionArgsLengthRangeNotMatching {
+        name: String,
+        min: usize,
+        max: usize,
+        found: usize,
+    },
+
     #[error("named function arg is not supported")]
     NamedFunctionArgNotSupported,
 

@@ -58,6 +58,33 @@ pub fn translate_function(sql_function: &SqlFunction) -> Result<Expr> {
                 .map(Expr::Function)
         }};
     }
+    macro_rules! func_with_two_arg {
+        ($func: expr) => {{
+            let result = match args.len() {
+                1 => Ok((translate_expr(args[0])?, None)),
+                2 => Ok((translate_expr(args[0])?, translate_expr(args[1]).map(Some)?)),
+                n => Err(TranslateError::FunctionArgsLengthRangeNotMatching {
+                    name: "LTRIM".to_owned(),
+                    min: 1,
+                    max: 2,
+                    found: n,
+                }),
+            };
+            let (expr, chars) = result?;
+            // {expr, chars}.map($func).map(Box::new).map(Expr::Function)
+            Ok(Expr::Function(Box::new(Function::Rtrim { expr, chars })))
+        }};
+    }
+    // let check_len2 = |args: Vec<&Expr, Global>| match args.len() {
+    //     1 => Ok((translate_expr(args[0])?, None)),
+    //     2 => Ok((translate_expr(args[0])?, translate_expr(args[1]).map(Some)?)),
+    //     n => Err(TranslateError::FunctionArgsLengthRangeNotMatching {
+    //         name: "LTRIM".to_owned(),
+    //         min: 1,
+    //         max: 2,
+    //         found: n,
+    //     }),
+    // };
 
     match name.as_str() {
         "LOWER" => func_with_one_arg!(Function::Lower),
@@ -97,6 +124,21 @@ pub fn translate_function(sql_function: &SqlFunction) -> Result<Expr> {
 
             Ok(Expr::Function(Box::new(Function::Lcm { left, right })))
         }
+        "LTRIM" => {
+            let result = match args.len() {
+                1 => Ok((translate_expr(args[0])?, None)),
+                2 => Ok((translate_expr(args[0])?, translate_expr(args[1]).map(Some)?)),
+                n => Err(TranslateError::FunctionArgsLengthRangeNotMatching {
+                    name: "LTRIM".to_owned(),
+                    min: 1,
+                    max: 2,
+                    found: n,
+                }),
+            };
+            let (expr, chars) = result?;
+            Ok(Expr::Function(Box::new(Function::Ltrim { expr, chars })))
+        }
+        "RTRIM" => func_with_two_arg!(Function::Rtrim),
         "COUNT" => aggr!(Aggregate::Count),
         "SUM" => aggr!(Aggregate::Sum),
         "MIN" => aggr!(Aggregate::Min),
