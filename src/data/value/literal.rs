@@ -1,3 +1,5 @@
+use crate::Interval;
+
 use {
     super::{error::ValueError, Value},
     crate::{
@@ -197,6 +199,9 @@ impl Value {
                 let v = if *v { "TRUE" } else { "FALSE" };
 
                 Ok(Value::Str(v.to_owned()))
+            }
+            (DataType::Interval, Literal::Text(v)) => {
+                Ok(Value::Interval(Interval::try_from(v.as_str())?))
             }
             (DataType::Boolean, Literal::Null)
             | (DataType::Int, Literal::Null)

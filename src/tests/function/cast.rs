@@ -142,8 +142,8 @@ test_case!(cast_value, async move {
         //     Err(ValueError::UnimplementedCast.into()),
         // ),
         (
-            r#"SELECT CAST(number AS INTERVAL) FROM Item"#,
-            Ok(select!(cast Interval; data::Interval::months(66))),
+            r#"SELECT CAST("1" AS INTERVAL) FROM Item"#,
+            Ok(select!(cast Interval; data::Interval::seconds(1))), //right: `Err(Parser("ParserError(\n    \"Expected literal string, found: 12\",\n)"))`'
         ),
     ];
 

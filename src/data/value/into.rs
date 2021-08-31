@@ -1,8 +1,6 @@
 use std::convert::TryFrom;
 
-use sqlparser::ast::Expr;
-
-use crate::{data, parse_interval, Interval};
+use crate::Interval;
 
 use {
     super::{Value, ValueError},
@@ -167,10 +165,8 @@ impl TryInto<Interval> for &Value {
 
     fn try_into(self) -> Result<Interval> {
         Ok(match self {
-            // Value::Date(value) => value.and_hms(0, 0, 0),
-            // Value::Interval(value) => *value,
-            Value::Str(value) => Interval::try_from(value),
-            // Value::Str(value) => parse_interval(value).unwrap(),
+            Value::Str(value) => Interval::try_from(value.as_str())?,
+            // Value::Str(value) => parse_interval(value)?,
             _ => return Err(ValueError::ImpossibleCast.into()),
         })
     }
