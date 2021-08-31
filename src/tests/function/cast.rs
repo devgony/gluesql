@@ -137,9 +137,13 @@ test_case!(cast_value, async move {
             r#"SELECT CAST(number AS BOOLEAN) FROM Item"#,
             Err(ValueError::ImpossibleCast.into()),
         ),
+        // (
+        //     r#"SELECT CAST(number AS INTERVAL) FROM Item"#,
+        //     Err(ValueError::UnimplementedCast.into()),
+        // ),
         (
-            r#"SELECT CAST(number AS INTERVAL) FROM Item"#,
-            Err(ValueError::UnimplementedCast.into()),
+            r#"SELECT CAST("1" AS INTERVAL) FROM Item"#,
+            Ok(select!(cast Interval; data::Interval::seconds(1))), //right: `Err(Parser("ParserError(\n    \"Expected literal string, found: 12\",\n)"))`'
         ),
     ];
 

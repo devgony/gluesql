@@ -1,3 +1,7 @@
+use std::convert::TryFrom;
+
+use crate::Interval;
+
 use {
     super::{Value, ValueError},
     crate::result::{Error, Result},
@@ -151,6 +155,18 @@ impl TryInto<NaiveDateTime> for &Value {
         Ok(match self {
             Value::Date(value) => value.and_hms(0, 0, 0),
             Value::Timestamp(value) => *value,
+            _ => return Err(ValueError::ImpossibleCast.into()),
+        })
+    }
+}
+
+impl TryInto<Interval> for &Value {
+    type Error = Error;
+
+    fn try_into(self) -> Result<Interval> {
+        Ok(match self {
+            Value::Str(value) => Interval::try_from(value.as_str())?,
+            // Value::Str(value) => parse_interval(value)?,
             _ => return Err(ValueError::ImpossibleCast.into()),
         })
     }
