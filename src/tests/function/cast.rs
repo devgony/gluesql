@@ -137,10 +137,38 @@ test_case!(cast_value, async move {
             r#"SELECT CAST(number AS BOOLEAN) FROM Item"#,
             Err(ValueError::ImpossibleCast.into()),
         ),
+        // (
+        //     r#"SELECT CAST(number AS INTERVAL) FROM Item"#,
+        //     Err(ValueError::UnimplementedCast.into()),
+        // ),
         (
-            r#"SELECT CAST(number AS INTERVAL) FROM Item"#,
-            Err(ValueError::UnimplementedCast.into()),
+            r#"SELECT CAST('1' AS INTERVAL HOUR TO SECOND) FROM Item"#,
+            Ok(select!(cast Interval; data::Interval::months(1))), //right: `Err(Parser("ParserError(\n    \"Expected literal string, found: 12\",\n)"))`'
         ),
+        //     (
+        //         r#"
+        // CREATE TABLE IntervalStrings (
+        //     interval_string TEXT,
+        // )"#,
+        //         Ok(Payload::Create),
+        //     ),
+        //     (
+        //         r#"
+        // INSERT INTO IntervalStrings VALUES
+        //     ('INTERVAL "1-2" YEAR TO MONTH',),
+        //     ('INTERVAL "12" DAY',),
+        //     ('INTERVAL "12" MINUTE',),
+        //     ('INTERVAL "-3 14" DAY TO HOUR',),
+        //     ('INTERVAL "3 14:00:00" DAY TO SECOND',),
+        //     ('INTERVAL "12:00" HOUR TO MINUTE',),
+        //     ('INTERVAL "-1000-11" YEAR TO MONTH',);
+        // "#,
+        //         Ok(Payload::Insert(1)),
+        //     ),
+        //     (
+        //         r#"SELECT CAST(interval_string AS INTERVAL) FROM IntervalStrings"#,
+        //         Ok(select!(cast Interval; data::Interval::seconds(1))), //right: `Err(Parser("ParserError(\n    \"Expected literal string, found: 12\",\n)"))`'
+        //     ),
     ];
 
     for (sql, expected) in test_cases {
