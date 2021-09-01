@@ -30,6 +30,7 @@ pub fn parse_interval(sql_interval: &str) -> Result<SqlExpr> {
     let tokens = Tokenizer::new(&dialect, sql_interval)
         .tokenize()
         .map_err(|e| Error::Parser(format!("{:#?}", e)))?;
+    println!("parse_interval=>{:?}", tokens);
 
     Parser::new(tokens, &dialect)
         .parse_literal_interval()
