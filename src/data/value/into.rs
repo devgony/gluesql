@@ -166,7 +166,6 @@ impl TryInto<Interval> for &Value {
     fn try_into(self) -> Result<Interval> {
         Ok(match self {
             Value::Str(value) => Interval::try_from(value.as_str())?,
-            // Value::Str(value) => parse_interval(value)?,
             _ => return Err(ValueError::ImpossibleCast.into()),
         })
     }

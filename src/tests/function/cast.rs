@@ -142,42 +142,54 @@ test_case!(cast_value, async move {
         //     Err(ValueError::UnimplementedCast.into()),
         // ),
         (
-<<<<<<< HEAD
-            r#"SELECT CAST("1" AS INTERVAL) FROM Item"#,
-            Ok(select!(cast Interval; data::Interval::seconds(1))), //right: `Err(Parser("ParserError(\n    \"Expected literal string, found: 12\",\n)"))`'
+            r#"SELECT CAST("'1' DAY" AS INTERVAL) AS cast FROM Item"#,
+            Ok(select!(cast Interval; data::Interval::days(1))),
         ),
-=======
-            r#"SELECT CAST('1' AS INTERVAL HOUR TO SECOND) FROM Item"#,
-            Ok(select!(cast Interval; data::Interval::months(1))), //right: `Err(Parser("ParserError(\n    \"Expected literal string, found: 12\",\n)"))`'
-        ),
-        //     (
-        //         r#"
-        // CREATE TABLE IntervalStrings (
-        //     interval_string TEXT,
-        // )"#,
-        //         Ok(Payload::Create),
-        //     ),
-        //     (
-        //         r#"
-        // INSERT INTO IntervalStrings VALUES
-        //     ('INTERVAL "1-2" YEAR TO MONTH',),
-        //     ('INTERVAL "12" DAY',),
-        //     ('INTERVAL "12" MINUTE',),
-        //     ('INTERVAL "-3 14" DAY TO HOUR',),
-        //     ('INTERVAL "3 14:00:00" DAY TO SECOND',),
-        //     ('INTERVAL "12:00" HOUR TO MINUTE',),
-        //     ('INTERVAL "-1000-11" YEAR TO MONTH',);
-        // "#,
-        //         Ok(Payload::Insert(1)),
-        //     ),
-        //     (
-        //         r#"SELECT CAST(interval_string AS INTERVAL) FROM IntervalStrings"#,
-        //         Ok(select!(cast Interval; data::Interval::seconds(1))), //right: `Err(Parser("ParserError(\n    \"Expected literal string, found: 12\",\n)"))`'
-        //     ),
->>>>>>> e6524e5b8b8226212120efa7d122b39c19835f89
     ];
 
     for (sql, expected) in test_cases {
         test!(expected, sql);
     }
+});
+
+test_case!(cast_interval, async move {
+    run!(
+        r#"
+CREATE TABLE IntervalLog (
+    id INTEGER,
+    interval1 TEXT,
+    interval2 TEXT,
+)"#
+    );
+
+    run!(
+        r#"
+INSERT INTO IntervalLog VALUES
+    (1, '"1-2" YEAR TO MONTH,         '"30" MONTH'),
+    (2, '"12" DAY,                    '"35" HOUR'),
+    (3, '"12" MINUTE,                 '"300" SECOND'),
+    (4, '"-3 14" DAY TO HOUR,         '"3 12:30" DAY TO MINUTE'),
+    (5, '"3 14:00:00" DAY TO SECOND,  '"3 12:30:12.1324" DAY TO SECOND'),
+    (6, '"12:00" HOUR TO MINUTE,      '"-12:30:12" HOUR TO SECOND'),
+    (7, '"-1000-11" YEAR TO MONTH,    '"-30:11" MINUTE TO SECOND');
+"#
+    );
+
+    use data::Interval as I;
+    use Value::*;
+
+    test!(
+        Ok(select!(
+            id  | interval1           | interval2
+            I64 | Interval            | Interval;
+            1     I::months(14)         I::months(30);
+            2     I::days(12)           I::hours(35);
+            3     I::minutes(12)        I::minutes(5);
+            4     I::hours(-86)         I::minutes(84 * 60 + 30);
+            5     I::minutes(86 * 60)   I::microseconds((((84 * 60) + 30) * 60 + 12) * 1_000_000 + 132_400);
+            6     I::hours(12)          I::seconds(-(12 * 3600 + 30 * 60 + 12));
+            7     I::months(-12_011)    I::seconds(-(30 * 60 + 11))
+        )),
+        "SELECT * FROM IntervalLog🚌;"
+    );
 });
