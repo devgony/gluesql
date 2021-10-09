@@ -1,5 +1,3 @@
-use bigdecimal::FromPrimitive;
-
 #[cfg(feature = "bigdecimal")]
 use {
     super::StringExt,
