@@ -169,6 +169,8 @@ pub async fn execute<T: Debug, U: GStore<T> + GStoreMut<T>>(
                 let column_defs = Rc::from(column_defs);
                 let column_validation = ColumnValidation::All(Rc::clone(&column_defs));
 
+                // let rows = query()
+
                 let rows = match &source.body {
                     SetExpr::Values(Values(values_list)) => values_list
                         .iter()
