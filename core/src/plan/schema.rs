@@ -1,11 +1,9 @@
-use crate::ast::TableAlias;
-
 use {
     super::expr::PlanExpr,
     crate::{
         ast::{
             Expr, Join, JoinConstraint, JoinOperator, Query, Select, SelectItem, SetExpr,
-            Statement, TableFactor, TableWithJoins,
+            Statement, TableAlias, TableFactor, TableWithJoins,
         },
         data::Schema,
         result::Result,
@@ -240,10 +238,8 @@ async fn scan_expr(storage: &dyn Store, expr: &Expr) -> Result<HashMap<SchemaKey
 
 #[cfg(test)]
 mod tests {
-    use super::SchemaKey;
-
     use {
-        super::fetch_schema_map,
+        super::{fetch_schema_map, SchemaKey},
         crate::{
             parse_sql::parse,
             plan::mock::{run, MockStorage},
