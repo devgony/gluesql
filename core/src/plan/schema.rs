@@ -169,13 +169,6 @@ async fn scan_table_factor(
     match table_factor {
         TableFactor::Table { name, alias, .. } => {
             let schema = storage.fetch_schema(name).await?;
-            // let alias = alias
-            //     .as_ref()
-            //     .map_or_else(|| name.clone(), |TableAlias { name, .. }| name.to_string());
-            // let alias = match alias {
-            //     Some(TableAlias { name, .. }) => name,
-            //     None => name,
-            // };
             let alias_name = alias
                 .as_ref()
                 .map(|TableAlias { name, .. }| name.to_string());
