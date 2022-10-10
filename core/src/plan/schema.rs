@@ -19,6 +19,9 @@ use {
     std::collections::HashMap,
 };
 
+#[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
+pub struct SchemaKey(pub String, pub Option<String>);
+
 pub async fn fetch_schema_map(
     storage: &dyn Store,
     statement: &Statement,
@@ -157,9 +160,6 @@ async fn scan_join(storage: &dyn Store, join: &Join) -> Result<HashMap<SchemaKey
 
     Ok(schema_list)
 }
-
-#[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub struct SchemaKey(pub String, pub Option<String>);
 
 #[async_recursion(?Send)]
 async fn scan_table_factor(
