@@ -173,7 +173,10 @@ pub trait Planner<'a> {
             | TableFactor::Dictionary { .. } => return next,
         };
 
-        let schema_key = SchemaKey(name.to_string(), alias.clone());
+        let schema_key = SchemaKey {
+            name: name.to_string(),
+            alias: alias.clone(),
+        };
         let column_defs = match self.get_schema(&schema_key) {
             Some(Schema { column_defs, .. }) => column_defs,
             None => return next,

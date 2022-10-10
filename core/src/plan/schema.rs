@@ -20,7 +20,10 @@ use {
 };
 
 #[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub struct SchemaKey(pub String, pub Option<String>);
+pub struct SchemaKey {
+    pub name: String,
+    pub alias: Option<String>,
+}
 
 pub async fn fetch_schema_map(
     storage: &dyn Store,
@@ -34,7 +37,15 @@ pub async fn fetch_schema_map(
             let table_schema = storage
                 .fetch_schema(table_name)
                 .await?
-                .map(|schema| HashMap::from([(SchemaKey(table_name.to_owned(), None), schema)]))
+                .map(|schema| {
+                    HashMap::from([(
+                        SchemaKey {
+                            name: table_name.to_owned(),
+                            alias: None,
+                        },
+                        schema,
+                    )])
+                })
                 .unwrap_or_else(HashMap::new);
             let source_schema_list = scan_query(storage, source).await?;
             let schema_list = table_schema.into_iter().chain(source_schema_list).collect();
@@ -45,10 +56,15 @@ pub async fn fetch_schema_map(
             stream::iter(names)
                 .map(Ok)
                 .try_filter_map(|table_name| async move {
-                    Ok(storage
-                        .fetch_schema(table_name)
-                        .await?
-                        .map(|schema| (SchemaKey(table_name.to_owned(), None), schema)))
+                    Ok(storage.fetch_schema(table_name).await?.map(|schema| {
+                        (
+                            SchemaKey {
+                                name: table_name.to_owned(),
+                                alias: None,
+                            },
+                            schema,
+                        )
+                    }))
                 })
                 .try_collect()
                 .await
@@ -169,10 +185,13 @@ async fn scan_table_factor(
     match table_factor {
         TableFactor::Table { name, alias, .. } => {
             let schema = storage.fetch_schema(name).await?;
-            let alias_name = alias
+            let alias = alias
                 .as_ref()
                 .map(|TableAlias { name, .. }| name.to_string());
-            let schema_key = SchemaKey(name.clone(), alias_name);
+            let schema_key = SchemaKey {
+                name: name.clone(),
+                alias,
+            };
             let schema_list: HashMap<SchemaKey, Schema> =
                 schema.map_or_else(HashMap::new, |schema| HashMap::from([(schema_key, schema)]));
 
@@ -253,7 +272,10 @@ mod tests {
         let actual = actual.as_slice();
         let expected = expected
             .iter()
-            .map(|str| SchemaKey(str.to_string(), None))
+            .map(|name| SchemaKey {
+                name: name.to_string(),
+                alias: None,
+            })
             .collect::<Vec<SchemaKey>>();
 
         assert_eq!(actual, expected, "{sql}");

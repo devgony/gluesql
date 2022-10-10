@@ -90,7 +90,10 @@ fn plan_query(schema_map: &HashMap<SchemaKey, Schema>, query: Query) -> Result<Q
         } => name,
     };
 
-    let schema_key = SchemaKey(table_name.to_string(), None);
+    let schema_key = SchemaKey {
+        name: table_name.to_string(),
+        alias: None,
+    };
     let indexes = match schema_map.get(&schema_key) {
         Some(Schema { indexes, .. }) => Indexes(indexes.clone()),
         None => {
