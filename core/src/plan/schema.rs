@@ -258,6 +258,10 @@ mod tests {
     fn run_test(storage: &MockStorage, sql: &str, expected: &[&str]) {
         let actual = plan(storage, sql).unwrap();
         let actual = actual.as_slice();
+        let expected = expected
+            .iter()
+            .map(|str| SchemaKey(str.to_string(), None))
+            .collect::<Vec<SchemaKey>>();
 
         assert_eq!(actual, expected, "{sql}");
     }
