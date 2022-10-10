@@ -1,5 +1,5 @@
 use {
-    super::context::Context,
+    super::{context::Context, schema::SchemaKey},
     crate::{
         ast::{ColumnDef, ColumnOption, ColumnOptionDef, Expr, Query, TableAlias, TableFactor},
         data::Schema,
@@ -8,7 +8,7 @@ use {
 };
 
 pub trait Planner<'a> {
-    fn get_schema(&self, name: &str) -> Option<&'a Schema>;
+    fn get_schema(&self, schema_key: &SchemaKey) -> Option<&'a Schema>;
 
     fn query(&self, outer_context: Option<Rc<Context<'a>>>, query: Query) -> Query;
 
@@ -173,7 +173,8 @@ pub trait Planner<'a> {
             | TableFactor::Dictionary { .. } => return next,
         };
 
-        let column_defs = match self.get_schema(name) {
+        let schema_key = SchemaKey(name.to_string(), alias.clone());
+        let column_defs = match self.get_schema(&schema_key) {
             Some(Schema { column_defs, .. }) => column_defs,
             None => return next,
         };

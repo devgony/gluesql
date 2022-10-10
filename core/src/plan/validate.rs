@@ -1,5 +1,5 @@
 use {
-    super::PlanError,
+    super::{schema::SchemaKey, PlanError},
     crate::{
         ast::{Expr, SelectItem, SetExpr, Statement},
         data::Schema,
@@ -9,7 +9,10 @@ use {
 };
 
 /// Validate user select column should not be ambiguous
-pub fn validate(schema_map: &HashMap<String, Schema>, statement: Statement) -> Result<Statement> {
+pub fn validate(
+    schema_map: &HashMap<SchemaKey, Schema>,
+    statement: Statement,
+) -> Result<Statement> {
     if let Statement::Query(query) = &statement {
         if let SetExpr::Select(select) = &query.body {
             if !select.from.joins.is_empty() {

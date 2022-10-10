@@ -22,7 +22,7 @@ use {
 pub async fn fetch_schema_map(
     storage: &dyn Store,
     statement: &Statement,
-) -> Result<HashMap<String, Schema>> {
+) -> Result<HashMap<SchemaKey, Schema>> {
     match statement {
         Statement::Query(query) => scan_query(storage, query).await,
         Statement::Insert {
@@ -31,7 +31,7 @@ pub async fn fetch_schema_map(
             let table_schema = storage
                 .fetch_schema(table_name)
                 .await?
-                .map(|schema| HashMap::from([(table_name.to_owned(), schema)]))
+                .map(|schema| HashMap::from([(SchemaKey(table_name.to_owned(), None), schema)]))
                 .unwrap_or_else(HashMap::new);
             let source_schema_list = scan_query(storage, source).await?;
             let schema_list = table_schema.into_iter().chain(source_schema_list).collect();
@@ -45,7 +45,7 @@ pub async fn fetch_schema_map(
                     Ok(storage
                         .fetch_schema(table_name)
                         .await?
-                        .map(|schema| (table_name.clone(), schema)))
+                        .map(|schema| (SchemaKey(table_name.to_owned(), None), schema)))
                 })
                 .try_collect()
                 .await
@@ -54,7 +54,7 @@ pub async fn fetch_schema_map(
     }
 }
 
-async fn scan_query(storage: &dyn Store, query: &Query) -> Result<HashMap<String, Schema>> {
+async fn scan_query(storage: &dyn Store, query: &Query) -> Result<HashMap<SchemaKey, Schema>> {
     let Query {
         body,
         limit,
@@ -83,7 +83,7 @@ async fn scan_query(storage: &dyn Store, query: &Query) -> Result<HashMap<String
     Ok(schema_list)
 }
 
-async fn scan_select(storage: &dyn Store, select: &Select) -> Result<HashMap<String, Schema>> {
+async fn scan_select(storage: &dyn Store, select: &Select) -> Result<HashMap<SchemaKey, Schema>> {
     let Select {
         projection,
         from,
@@ -99,7 +99,7 @@ async fn scan_select(storage: &dyn Store, select: &Select) -> Result<HashMap<Str
                 Box::pin(future::ok(HashMap::new()))
             }
         })
-        .try_collect::<Vec<HashMap<String, Schema>>>()
+        .try_collect::<Vec<HashMap<SchemaKey, Schema>>>()
         .await?
         .into_iter()
         .flatten();
@@ -110,7 +110,7 @@ async fn scan_select(storage: &dyn Store, select: &Select) -> Result<HashMap<Str
 
     Ok(stream::iter(exprs)
         .then(|expr| scan_expr(storage, expr))
-        .try_collect::<Vec<HashMap<String, Schema>>>()
+        .try_collect::<Vec<HashMap<SchemaKey, Schema>>>()
         .await?
         .into_iter()
         .flatten()
@@ -122,13 +122,13 @@ async fn scan_select(storage: &dyn Store, select: &Select) -> Result<HashMap<Str
 async fn scan_table_with_joins(
     storage: &dyn Store,
     table_with_joins: &TableWithJoins,
-) -> Result<HashMap<String, Schema>> {
+) -> Result<HashMap<SchemaKey, Schema>> {
     let TableWithJoins { relation, joins } = table_with_joins;
     let schema_list = scan_table_factor(storage, relation).await?;
 
     Ok(stream::iter(joins)
         .then(|join| scan_join(storage, join))
-        .try_collect::<Vec<HashMap<String, Schema>>>()
+        .try_collect::<Vec<HashMap<SchemaKey, Schema>>>()
         .await?
         .into_iter()
         .flatten()
@@ -136,7 +136,7 @@ async fn scan_table_with_joins(
         .collect())
 }
 
-async fn scan_join(storage: &dyn Store, join: &Join) -> Result<HashMap<String, Schema>> {
+async fn scan_join(storage: &dyn Store, join: &Join) -> Result<HashMap<SchemaKey, Schema>> {
     let Join {
         relation,
         join_operator,
@@ -158,23 +158,30 @@ async fn scan_join(storage: &dyn Store, join: &Join) -> Result<HashMap<String, S
     Ok(schema_list)
 }
 
+#[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
+pub struct SchemaKey(pub String, pub Option<String>);
+
 #[async_recursion(?Send)]
 async fn scan_table_factor(
     storage: &dyn Store,
     table_factor: &TableFactor,
-) -> Result<HashMap<String, Schema>> {
+) -> Result<HashMap<SchemaKey, Schema>> {
     match table_factor {
         TableFactor::Table { name, alias, .. } => {
             let schema = storage.fetch_schema(name).await?;
-            let alias = alias
-                .as_ref()
-                .map_or_else(|| name.clone(), |TableAlias { name, .. }| name.to_string());
+            // let alias = alias
+            //     .as_ref()
+            //     .map_or_else(|| name.clone(), |TableAlias { name, .. }| name.to_string());
             // let alias = match alias {
             //     Some(TableAlias { name, .. }) => name,
             //     None => name,
             // };
-            let schema_list: HashMap<String, Schema> =
-                schema.map_or_else(HashMap::new, |schema| HashMap::from([(alias, schema)]));
+            let alias_name = alias
+                .as_ref()
+                .map(|TableAlias { name, .. }| name.to_string());
+            let schema_key = SchemaKey(name.clone(), alias_name);
+            let schema_list: HashMap<SchemaKey, Schema> =
+                schema.map_or_else(HashMap::new, |schema| HashMap::from([(schema_key, schema)]));
 
             Ok(schema_list)
         }
@@ -184,7 +191,7 @@ async fn scan_table_factor(
 }
 
 #[async_recursion(?Send)]
-async fn scan_expr(storage: &dyn Store, expr: &Expr) -> Result<HashMap<String, Schema>> {
+async fn scan_expr(storage: &dyn Store, expr: &Expr) -> Result<HashMap<SchemaKey, Schema>> {
     let schema_list = match expr.into() {
         PlanExpr::None | PlanExpr::Identifier(_) | PlanExpr::CompoundIdentifier { .. } => {
             HashMap::new()
@@ -203,7 +210,7 @@ async fn scan_expr(storage: &dyn Store, expr: &Expr) -> Result<HashMap<String, S
             .collect(),
         PlanExpr::MultiExprs(exprs) => stream::iter(exprs)
             .then(|expr| scan_expr(storage, expr))
-            .try_collect::<Vec<HashMap<String, Schema>>>()
+            .try_collect::<Vec<HashMap<SchemaKey, Schema>>>()
             .await?
             .into_iter()
             .flatten()
@@ -221,6 +228,8 @@ async fn scan_expr(storage: &dyn Store, expr: &Expr) -> Result<HashMap<String, S
 
 #[cfg(test)]
 mod tests {
+    use super::SchemaKey;
+
     use {
         super::fetch_schema_map,
         crate::{
@@ -233,15 +242,15 @@ mod tests {
         utils::Vector,
     };
 
-    fn plan(storage: &MockStorage, sql: &str) -> Result<Vec<String>> {
+    fn plan(storage: &MockStorage, sql: &str) -> Result<Vec<SchemaKey>> {
         let parsed = parse(sql).expect(sql).into_iter().next().unwrap();
         let statement = translate(&parsed).unwrap();
         let schema_map = block_on(fetch_schema_map(storage, &statement));
 
         Ok(schema_map?
             .into_iter()
-            .map(|(table_name, _)| table_name)
-            .collect::<Vector<String>>()
+            .map(|(schema_key, _)| schema_key)
+            .collect::<Vector<SchemaKey>>()
             .sort()
             .into())
     }

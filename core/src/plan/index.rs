@@ -1,4 +1,5 @@
 use {
+    super::schema::SchemaKey,
     crate::{
         ast::{
             AstLiteral, BinaryOperator, Expr, IndexItem, IndexOperator, OrderByExpr, Query, Select,
@@ -11,7 +12,7 @@ use {
     utils::Vector,
 };
 
-pub fn plan(schema_map: &HashMap<String, Schema>, statement: Statement) -> Result<Statement> {
+pub fn plan(schema_map: &HashMap<SchemaKey, Schema>, statement: Statement) -> Result<Statement> {
     match statement {
         Statement::Query(query) => plan_query(schema_map, query).map(Statement::Query),
         _ => Ok(statement),
@@ -48,7 +49,7 @@ impl Indexes {
     }
 }
 
-fn plan_query(schema_map: &HashMap<String, Schema>, query: Query) -> Result<Query> {
+fn plan_query(schema_map: &HashMap<SchemaKey, Schema>, query: Query) -> Result<Query> {
     let Query {
         body,
         order_by,
@@ -89,7 +90,8 @@ fn plan_query(schema_map: &HashMap<String, Schema>, query: Query) -> Result<Quer
         } => name,
     };
 
-    let indexes = match schema_map.get(table_name) {
+    let schema_key = SchemaKey(table_name.to_string(), None);
+    let indexes = match schema_map.get(&schema_key) {
         Some(Schema { indexes, .. }) => Indexes(indexes.clone()),
         None => {
             return Ok(Query {
@@ -167,7 +169,7 @@ fn plan_query(schema_map: &HashMap<String, Schema>, query: Query) -> Result<Quer
 }
 
 fn plan_select(
-    schema_map: &HashMap<String, Schema>,
+    schema_map: &HashMap<SchemaKey, Schema>,
     indexes: &Indexes,
     select: Select,
 ) -> Result<Select> {
@@ -248,7 +250,7 @@ enum Planned {
 }
 
 fn plan_index(
-    schema_map: &HashMap<String, Schema>,
+    schema_map: &HashMap<SchemaKey, Schema>,
     indexes: &Indexes,
     selection: Expr,
 ) -> Result<Planned> {

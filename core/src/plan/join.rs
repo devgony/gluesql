@@ -1,5 +1,8 @@
 use {
-    super::{context::Context, evaluable::check_expr as check_evaluable, planner::Planner},
+    super::{
+        context::Context, evaluable::check_expr as check_evaluable, planner::Planner,
+        schema::SchemaKey,
+    },
     crate::{
         ast::{
             BinaryOperator, Expr, Join, JoinConstraint, JoinExecutor, JoinOperator, Query, Select,
@@ -11,7 +14,7 @@ use {
     utils::Vector,
 };
 
-pub fn plan(schema_map: &HashMap<String, Schema>, statement: Statement) -> Statement {
+pub fn plan(schema_map: &HashMap<SchemaKey, Schema>, statement: Statement) -> Statement {
     let planner = JoinPlanner { schema_map };
 
     match statement {
@@ -25,7 +28,7 @@ pub fn plan(schema_map: &HashMap<String, Schema>, statement: Statement) -> State
 }
 
 struct JoinPlanner<'a> {
-    schema_map: &'a HashMap<String, Schema>,
+    schema_map: &'a HashMap<SchemaKey, Schema>,
 }
 
 impl<'a> Planner<'a> for JoinPlanner<'a> {
@@ -54,8 +57,8 @@ impl<'a> Planner<'a> for JoinPlanner<'a> {
         }
     }
 
-    fn get_schema(&self, name: &str) -> Option<&'a Schema> {
-        self.schema_map.get(name)
+    fn get_schema(&self, schema_key: &SchemaKey) -> Option<&'a Schema> {
+        self.schema_map.get(schema_key)
     }
 }
 
