@@ -27,7 +27,7 @@ pub fn plan(schema_map: &HashMap<SchemaKey, Schema>, statement: Statement) -> St
 }
 
 struct PrimaryKeyPlanner<'a> {
-    schema_map: &'a HashMap<SchemaKey, Schema>,
+    schema_map: &'a HashMap<SchemaKey<'a>, Schema>,
 }
 
 impl<'a> Planner<'a> for PrimaryKeyPlanner<'a> {
@@ -44,7 +44,7 @@ impl<'a> Planner<'a> for PrimaryKeyPlanner<'a> {
         Query { body, ..query }
     }
 
-    fn get_schema(&self, schema_key: &SchemaKey) -> Option<&'a Schema> {
+    fn get_schema(&self, schema_key: &'a SchemaKey) -> Option<&'a Schema> {
         self.schema_map.get(schema_key)
     }
 }

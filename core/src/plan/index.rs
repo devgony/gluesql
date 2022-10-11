@@ -8,7 +8,7 @@ use {
         data::{Schema, SchemaIndex, SchemaIndexOrd, TableError},
         result::{Error, Result},
     },
-    std::collections::HashMap,
+    std::{borrow::Cow, collections::HashMap},
     utils::Vector,
 };
 
@@ -91,7 +91,7 @@ fn plan_query(schema_map: &HashMap<SchemaKey, Schema>, query: Query) -> Result<Q
     };
 
     let schema_key = SchemaKey {
-        name: table_name.to_string(),
+        name: Cow::from(table_name),
         alias: None,
     };
     let indexes = match schema_map.get(&schema_key) {

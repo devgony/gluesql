@@ -14,19 +14,19 @@ use {
         future,
         stream::{self, StreamExt, TryStreamExt},
     },
-    std::collections::HashMap,
+    std::{borrow::Cow, collections::HashMap},
 };
 
 #[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub struct SchemaKey {
-    pub name: String,
-    pub alias: Option<String>,
+pub struct SchemaKey<'a> {
+    pub name: Cow<'a, str>,
+    pub alias: Option<Cow<'a, str>>,
 }
 
-pub async fn fetch_schema_map(
-    storage: &dyn Store,
-    statement: &Statement,
-) -> Result<HashMap<SchemaKey, Schema>> {
+pub async fn fetch_schema_map<'a>(
+    storage: &'a dyn Store,
+    statement: &'a Statement,
+) -> Result<HashMap<SchemaKey<'a>, Schema>> {
     match statement {
         Statement::Query(query) => scan_query(storage, query).await,
         Statement::Insert {
@@ -38,7 +38,7 @@ pub async fn fetch_schema_map(
                 .map(|schema| {
                     HashMap::from([(
                         SchemaKey {
-                            name: table_name.to_owned(),
+                            name: Cow::from(table_name),
                             alias: None,
                         },
                         schema,
@@ -57,7 +57,7 @@ pub async fn fetch_schema_map(
                     Ok(storage.fetch_schema(table_name).await?.map(|schema| {
                         (
                             SchemaKey {
-                                name: table_name.to_owned(),
+                                name: Cow::from(table_name),
                                 alias: None,
                             },
                             schema,
@@ -71,7 +71,10 @@ pub async fn fetch_schema_map(
     }
 }
 
-async fn scan_query(storage: &dyn Store, query: &Query) -> Result<HashMap<SchemaKey, Schema>> {
+async fn scan_query<'a>(
+    storage: &'a dyn Store,
+    query: &'a Query,
+) -> Result<HashMap<SchemaKey<'a>, Schema>> {
     let Query {
         body,
         limit,
@@ -100,7 +103,10 @@ async fn scan_query(storage: &dyn Store, query: &Query) -> Result<HashMap<Schema
     Ok(schema_list)
 }
 
-async fn scan_select(storage: &dyn Store, select: &Select) -> Result<HashMap<SchemaKey, Schema>> {
+async fn scan_select<'a>(
+    storage: &'a dyn Store,
+    select: &'a Select,
+) -> Result<HashMap<SchemaKey<'a>, Schema>> {
     let Select {
         projection,
         from,
@@ -136,10 +142,10 @@ async fn scan_select(storage: &dyn Store, select: &Select) -> Result<HashMap<Sch
         .collect())
 }
 
-async fn scan_table_with_joins(
-    storage: &dyn Store,
-    table_with_joins: &TableWithJoins,
-) -> Result<HashMap<SchemaKey, Schema>> {
+async fn scan_table_with_joins<'a>(
+    storage: &'a dyn Store,
+    table_with_joins: &'a TableWithJoins,
+) -> Result<HashMap<SchemaKey<'a>, Schema>> {
     let TableWithJoins { relation, joins } = table_with_joins;
     let schema_list = scan_table_factor(storage, relation).await?;
 
@@ -153,7 +159,10 @@ async fn scan_table_with_joins(
         .collect())
 }
 
-async fn scan_join(storage: &dyn Store, join: &Join) -> Result<HashMap<SchemaKey, Schema>> {
+async fn scan_join<'a>(
+    storage: &'a dyn Store,
+    join: &'a Join,
+) -> Result<HashMap<SchemaKey<'a>, Schema>> {
     let Join {
         relation,
         join_operator,
@@ -176,10 +185,10 @@ async fn scan_join(storage: &dyn Store, join: &Join) -> Result<HashMap<SchemaKey
 }
 
 #[async_recursion(?Send)]
-async fn scan_table_factor(
-    storage: &dyn Store,
-    table_factor: &TableFactor,
-) -> Result<HashMap<SchemaKey, Schema>> {
+async fn scan_table_factor<'a>(
+    storage: &'a dyn Store,
+    table_factor: &'a TableFactor,
+) -> Result<HashMap<SchemaKey<'a>, Schema>> {
     match table_factor {
         TableFactor::Table { name, alias, .. } => {
             let schema = storage.fetch_schema(name).await?;
@@ -187,8 +196,8 @@ async fn scan_table_factor(
                 .as_ref()
                 .map(|TableAlias { name, .. }| name.to_string());
             let schema_key = SchemaKey {
-                name: name.clone(),
-                alias,
+                name: Cow::from(name),
+                alias: alias.map(Cow::from),
             };
             let schema_list: HashMap<SchemaKey, Schema> =
                 schema.map_or_else(HashMap::new, |schema| HashMap::from([(schema_key, schema)]));
@@ -201,7 +210,10 @@ async fn scan_table_factor(
 }
 
 #[async_recursion(?Send)]
-async fn scan_expr(storage: &dyn Store, expr: &Expr) -> Result<HashMap<SchemaKey, Schema>> {
+async fn scan_expr<'a>(
+    storage: &'a dyn Store,
+    expr: &'a Expr,
+) -> Result<HashMap<SchemaKey<'a>, Schema>> {
     let schema_list = match expr.into() {
         PlanExpr::None | PlanExpr::Identifier(_) | PlanExpr::CompoundIdentifier { .. } => {
             HashMap::new()
@@ -238,6 +250,8 @@ async fn scan_expr(storage: &dyn Store, expr: &Expr) -> Result<HashMap<SchemaKey
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
+
     use {
         super::{fetch_schema_map, SchemaKey},
         crate::{
@@ -250,7 +264,7 @@ mod tests {
         utils::Vector,
     };
 
-    fn plan(storage: &MockStorage, sql: &str) -> Result<Vec<SchemaKey>> {
+    fn plan<'a>(storage: &'a MockStorage, sql: &'a str) -> Result<Vec<SchemaKey<'a>>> {
         let parsed = parse(sql).expect(sql).into_iter().next().unwrap();
         let statement = translate(&parsed).unwrap();
         let schema_map = block_on(fetch_schema_map(storage, &statement));
@@ -269,7 +283,7 @@ mod tests {
         let expected = expected
             .iter()
             .map(|name| SchemaKey {
-                name: name.to_string(),
+                name: Cow::from(*name),
                 alias: None,
             })
             .collect::<Vec<SchemaKey>>();

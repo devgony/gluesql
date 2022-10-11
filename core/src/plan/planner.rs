@@ -4,11 +4,11 @@ use {
         ast::{ColumnDef, ColumnOption, ColumnOptionDef, Expr, Query, TableAlias, TableFactor},
         data::Schema,
     },
-    std::rc::Rc,
+    std::{borrow::Cow, rc::Rc},
 };
 
 pub trait Planner<'a> {
-    fn get_schema(&self, schema_key: &SchemaKey) -> Option<&'a Schema>;
+    fn get_schema(&self, schema_key: &'a SchemaKey) -> Option<&'a Schema>;
 
     fn query(&self, outer_context: Option<Rc<Context<'a>>>, query: Query) -> Query;
 
@@ -160,7 +160,7 @@ pub trait Planner<'a> {
     fn update_context(
         &self,
         next: Option<Rc<Context<'a>>>,
-        table_factor: &TableFactor,
+        table_factor: &'a TableFactor,
     ) -> Option<Rc<Context<'a>>> {
         let (name, alias) = match table_factor {
             TableFactor::Table { name, alias, .. } => {
@@ -174,8 +174,8 @@ pub trait Planner<'a> {
         };
 
         let schema_key = SchemaKey {
-            name: name.to_string(),
-            alias: alias.clone(),
+            name: Cow::from(name),
+            alias: alias.map(Cow::from),
         };
         let column_defs = match self.get_schema(&schema_key) {
             Some(Schema { column_defs, .. }) => column_defs,
