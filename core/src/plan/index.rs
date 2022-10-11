@@ -92,7 +92,7 @@ fn plan_query(schema_map: &HashMap<SchemaKey, Schema>, query: Query) -> Result<Q
 
     let schema_key = SchemaKey {
         name: Cow::from(table_name),
-        alias: None,
+        alias: Cow::Owned(None),
     };
     let indexes = match schema_map.get(&schema_key) {
         Some(Schema { indexes, .. }) => Indexes(indexes.clone()),

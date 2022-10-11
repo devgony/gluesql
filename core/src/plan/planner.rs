@@ -175,7 +175,7 @@ pub trait Planner<'a> {
 
         let schema_key = SchemaKey {
             name: Cow::from(name),
-            alias: alias.map(Cow::from),
+            alias: Cow::Owned(alias),
         };
         let column_defs = match self.get_schema(&schema_key) {
             Some(Schema { column_defs, .. }) => column_defs,

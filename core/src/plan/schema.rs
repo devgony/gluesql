@@ -20,7 +20,7 @@ use {
 #[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct SchemaKey<'a> {
     pub name: Cow<'a, str>,
-    pub alias: Option<Cow<'a, str>>,
+    pub alias: Cow<'a, Option<String>>,
 }
 
 pub async fn fetch_schema_map<'a>(
@@ -39,7 +39,7 @@ pub async fn fetch_schema_map<'a>(
                     HashMap::from([(
                         SchemaKey {
                             name: Cow::from(table_name),
-                            alias: None,
+                            alias: Cow::Owned(None),
                         },
                         schema,
                     )])
@@ -58,7 +58,7 @@ pub async fn fetch_schema_map<'a>(
                         (
                             SchemaKey {
                                 name: Cow::from(table_name),
-                                alias: None,
+                                alias: Cow::Owned(None),
                             },
                             schema,
                         )
@@ -197,7 +197,7 @@ async fn scan_table_factor<'a>(
                 .map(|TableAlias { name, .. }| name.to_string());
             let schema_key = SchemaKey {
                 name: Cow::from(name),
-                alias: alias.map(Cow::from),
+                alias: Cow::Owned(alias),
             };
             let schema_list: HashMap<SchemaKey, Schema> =
                 schema.map_or_else(HashMap::new, |schema| HashMap::from([(schema_key, schema)]));
@@ -284,7 +284,7 @@ mod tests {
             .iter()
             .map(|name| SchemaKey {
                 name: Cow::from(*name),
-                alias: None,
+                alias: Cow::Owned(None),
             })
             .collect::<Vec<SchemaKey>>();
 
