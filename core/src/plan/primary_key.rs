@@ -13,7 +13,7 @@ use {
     std::{collections::HashMap, rc::Rc},
 };
 
-pub fn plan(schema_map: &HashMap<SchemaKey, Schema>, statement: Statement) -> Statement {
+pub fn plan<'a>(schema_map: &'a HashMap<SchemaKey<'a>, Schema>, statement: Statement) -> Statement {
     let planner = PrimaryKeyPlanner { schema_map };
 
     match statement {
@@ -44,7 +44,7 @@ impl<'a> Planner<'a> for PrimaryKeyPlanner<'a> {
         Query { body, ..query }
     }
 
-    fn get_schema(&self, schema_key: &'a SchemaKey) -> Option<&'a Schema> {
+    fn get_schema(&self, schema_key: &'a SchemaKey<'a>) -> Option<&'a Schema> {
         self.schema_map.get(schema_key)
     }
 }

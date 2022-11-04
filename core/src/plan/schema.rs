@@ -19,7 +19,7 @@ use {
 
 #[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct SchemaKey<'a> {
-    pub name: Cow<'a, str>,
+    pub name: Cow<'a, String>,
     pub alias: Cow<'a, Option<String>>,
 }
 
@@ -38,7 +38,7 @@ pub async fn fetch_schema_map<'a>(
                 .map(|schema| {
                     HashMap::from([(
                         SchemaKey {
-                            name: Cow::from(table_name),
+                            name: Cow::Borrowed(table_name),
                             alias: Cow::Owned(None),
                         },
                         schema,
@@ -57,7 +57,7 @@ pub async fn fetch_schema_map<'a>(
                     Ok(storage.fetch_schema(table_name).await?.map(|schema| {
                         (
                             SchemaKey {
-                                name: Cow::from(table_name),
+                                name: Cow::Borrowed(table_name),
                                 alias: Cow::Owned(None),
                             },
                             schema,
@@ -196,7 +196,8 @@ async fn scan_table_factor<'a>(
                 .as_ref()
                 .map(|TableAlias { name, .. }| name.to_string());
             let schema_key = SchemaKey {
-                name: Cow::from(name),
+                name: Cow::Borrowed(name),
+                // alias: Cow::Borrowed(&alias),
                 alias: Cow::Owned(alias),
             };
             let schema_list: HashMap<SchemaKey, Schema> =
@@ -283,7 +284,7 @@ mod tests {
         let expected = expected
             .iter()
             .map(|name| SchemaKey {
-                name: Cow::from(*name),
+                name: Cow::Borrowed(&name.to_string()),
                 alias: Cow::Owned(None),
             })
             .collect::<Vec<SchemaKey>>();
