@@ -57,7 +57,7 @@ impl<'a> Planner<'a> for JoinPlanner<'a> {
         }
     }
 
-    fn get_schema(&self, schema_key: &'a SchemaKey<'a>) -> Option<&'a Schema> {
+    fn get_schema(&self, schema_key: &SchemaKey<'a>) -> Option<&'a Schema> {
         self.schema_map.get(schema_key)
     }
 }

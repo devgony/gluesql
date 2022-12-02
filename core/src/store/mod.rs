@@ -72,7 +72,7 @@ pub type RowIter = Box<dyn Iterator<Item = Result<(Key, Row)>>>;
 /// By implementing `Store` trait, you can run `SELECT` query.
 #[async_trait(?Send)]
 pub trait Store {
-    async fn fetch_schema(&self, table_name: &str) -> Result<Option<Schema>>;
+    async fn fetch_schema(&self, table_name: String) -> Result<Option<Schema>>;
 
     async fn fetch_all_schemas(&self) -> Result<Vec<Schema>>;
 

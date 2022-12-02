@@ -19,13 +19,13 @@ use {
 
 #[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct SchemaKey<'a> {
-    pub name: Cow<'a, String>,
-    pub alias: Cow<'a, Option<String>>,
+    pub name: Cow<'a, str>,
+    pub alias: Option<Cow<'a, str>>,
 }
 
 pub async fn fetch_schema_map<'a>(
     storage: &'a dyn Store,
-    statement: &'a Statement,
+    statement: Statement,
 ) -> Result<HashMap<SchemaKey<'a>, Schema>> {
     match statement {
         Statement::Query(query) => scan_query(storage, query).await,
@@ -38,8 +38,8 @@ pub async fn fetch_schema_map<'a>(
                 .map(|schema| {
                     HashMap::from([(
                         SchemaKey {
-                            name: Cow::Borrowed(table_name),
-                            alias: Cow::Owned(None),
+                            name: Cow::Owned(table_name),
+                            alias: None,
                         },
                         schema,
                     )])
@@ -57,8 +57,8 @@ pub async fn fetch_schema_map<'a>(
                     Ok(storage.fetch_schema(table_name).await?.map(|schema| {
                         (
                             SchemaKey {
-                                name: Cow::Borrowed(table_name),
-                                alias: Cow::Owned(None),
+                                name: Cow::Owned(table_name),
+                                alias: None,
                             },
                             schema,
                         )
@@ -73,7 +73,7 @@ pub async fn fetch_schema_map<'a>(
 
 async fn scan_query<'a>(
     storage: &'a dyn Store,
-    query: &'a Query,
+    query: Query,
 ) -> Result<HashMap<SchemaKey<'a>, Schema>> {
     let Query {
         body,
@@ -197,8 +197,7 @@ async fn scan_table_factor<'a>(
                 .map(|TableAlias { name, .. }| name.to_string());
             let schema_key = SchemaKey {
                 name: Cow::Borrowed(name),
-                // alias: Cow::Borrowed(&alias),
-                alias: Cow::Owned(alias),
+                alias: alias.map(Cow::from),
             };
             let schema_list: HashMap<SchemaKey, Schema> =
                 schema.map_or_else(HashMap::new, |schema| HashMap::from([(schema_key, schema)]));
@@ -268,7 +267,7 @@ mod tests {
     fn plan<'a>(storage: &'a MockStorage, sql: &'a str) -> Result<Vec<SchemaKey<'a>>> {
         let parsed = parse(sql).expect(sql).into_iter().next().unwrap();
         let statement = translate(&parsed).unwrap();
-        let schema_map = block_on(fetch_schema_map(storage, &statement));
+        let schema_map = block_on(fetch_schema_map(storage, statement));
 
         Ok(schema_map?
             .into_iter()
@@ -284,8 +283,8 @@ mod tests {
         let expected = expected
             .iter()
             .map(|name| SchemaKey {
-                name: Cow::Borrowed(&name.to_string()),
-                alias: Cow::Owned(None),
+                name: Cow::Borrowed(name),
+                alias: None,
             })
             .collect::<Vec<SchemaKey>>();
 

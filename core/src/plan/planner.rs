@@ -8,7 +8,7 @@ use {
 };
 
 pub trait Planner<'a> {
-    fn get_schema(&'a self, schema_key: &'a SchemaKey<'a>) -> Option<&'a Schema>;
+    fn get_schema(&'a self, schema_key: &SchemaKey<'a>) -> Option<&'a Schema>;
 
     fn query(&self, outer_context: Option<Rc<Context<'a>>>, query: Query) -> Query;
 
@@ -173,12 +173,12 @@ pub trait Planner<'a> {
             | TableFactor::Dictionary { .. } => return next,
         };
 
-        let alias: &'a Option<String> = &alias;
+        // let alias: &'a Option<String> = &alias;
 
         let schema_key: SchemaKey<'a> = SchemaKey {
             name: Cow::Owned(name.to_owned()),
             // alias: Cow::Owned(alias.clone()),
-            alias: Cow::Borrowed(alias),
+            alias: alias.as_ref().map(Cow::from),
         };
 
         let column_defs = match self.get_schema(&schema_key) {
