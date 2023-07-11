@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use crate::data::{HashMapJsonExt, Literal};
+
 use {
     super::{EvaluateError, Evaluated},
     crate::{
@@ -485,6 +489,34 @@ pub fn prepend<'a>(expr: Evaluated<'_>, value: Evaluated<'_>) -> Result<Evaluate
             Ok(Evaluated::Value(Value::List(l)))
         }
         _ => Err(EvaluateError::ListTypeRequired.into()),
+    }
+}
+
+// --- map ---
+pub fn keys<'a>(expr: Evaluated<'_>) -> Result<Evaluated<'a>> {
+    match expr {
+        Evaluated::Value(Value::Map(hash_map)) => {
+            let mut keys = hash_map
+                .keys()
+                .map(|k| Value::Str(k.to_string()))
+                .collect::<Vec<_>>();
+            keys.sort_by(|a, b| a.evaluate_cmp(b).unwrap());
+
+            Ok(Evaluated::Value(Value::List(keys)))
+        }
+        Evaluated::Literal(Literal::Text(text)) => {
+            HashMap::parse_json_object(&text).map(|hash_map: HashMap<String, Value>| {
+                let mut keys = hash_map
+                    .keys()
+                    .map(|k| Value::Str(k.to_string()))
+                    .collect::<Vec<_>>();
+
+                keys.sort_by(|a, b| a.evaluate_cmp(b).unwrap());
+
+                Evaluated::Value(Value::List(keys))
+            })
+        }
+        _ => Err(EvaluateError::MapTypeRequired.into()),
     }
 }
 

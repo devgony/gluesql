@@ -159,6 +159,7 @@ pub enum Function {
         expr: Expr,
         value: Expr,
     },
+    Keys(Expr),
     GetX(Expr),
     GetY(Expr),
     Point {
@@ -359,6 +360,12 @@ impl ToSql for Function {
                     "PREPEND({items}, {value})",
                     items = expr.to_sql(),
                     value = value.to_sql()
+                }
+            }
+            Function::Keys(expr) => {
+                format! {
+                    "KEYS({items})",
+                    items = expr.to_sql(),
                 }
             }
             Function::GetX(e) => format!("GET_X({})", e.to_sql()),
