@@ -38,6 +38,12 @@ impl<'a> From<Vec<ExprNode<'a>>> for SelectItemList<'a> {
     }
 }
 
+impl<'a> From<SelectItemNode<'a>> for SelectItemList<'a> {
+    fn from(select_item_node: SelectItemNode<'a>) -> Self {
+        SelectItemList::SelectItems(vec![select_item_node])
+    }
+}
+
 impl<'a> TryFrom<SelectItemList<'a>> for Vec<SelectItem> {
     type Error = Error;
 

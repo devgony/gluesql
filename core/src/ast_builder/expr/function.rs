@@ -2,7 +2,7 @@ use {
     super::ExprNode,
     crate::{
         ast::{DateTimeField, Function},
-        ast_builder::{DataTypeNode, ExprList},
+        ast_builder::{DataTypeNode, ExprList, SelectItemNode},
         result::{Error, Result},
     },
 };
@@ -511,6 +511,9 @@ impl<'a> ExprNode<'a> {
     }
     pub fn extract(self, field: DateTimeField) -> ExprNode<'a> {
         extract(field, self)
+    }
+    pub fn alias_as(self, alias: &'a str) -> SelectItemNode<'a> {
+        SelectItemNode::ExprWithAlias { expr: self, alias }
     }
 }
 

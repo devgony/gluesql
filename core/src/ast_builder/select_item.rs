@@ -12,6 +12,7 @@ use {
 pub enum SelectItemNode<'a> {
     SelectItem(SelectItem),
     Expr(ExprNode<'a>),
+    ExprWithAlias { expr: ExprNode<'a>, alias: &'a str },
     Text(String),
 }
 
@@ -48,6 +49,10 @@ impl<'a> TryFrom<SelectItemNode<'a>> for SelectItem {
 
                 Ok(SelectItem::Expr { expr, label })
             }
+            SelectItemNode::ExprWithAlias { expr, alias } => Ok(SelectItem::Expr {
+                expr: Expr::try_from(expr)?,
+                label: alias.to_owned(),
+            }),
         }
     }
 }
