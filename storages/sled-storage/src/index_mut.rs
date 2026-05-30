@@ -1,7 +1,7 @@
 use {
     super::{
         SledStorage, Snapshot, err_into,
-        index_sync::IndexSync,
+        index_sync::{IndexPlan, IndexSync},
         key,
         lock::{self, LockAcquired},
         transaction::TxPayload,
@@ -114,6 +114,8 @@ impl IndexMut for SledStorage {
                 .map_err(err_into)
                 .map_err(ConflictableTransactionError::Abort)?;
 
+            let index = IndexPlan::from(&index);
+
             block_on(async {
                 for (data_key, row) in &rows {
                     let data_key = data_key
@@ -201,6 +203,8 @@ impl IndexMut for SledStorage {
             let schema_snapshot = bincode::serialize(&schema_snapshot)
                 .map_err(err_into)
                 .map_err(ConflictableTransactionError::Abort)?;
+
+            let index = IndexPlan::from(&index);
 
             block_on(async {
                 for (data_key, row) in &rows {
